@@ -22,3 +22,5 @@ const militaryAsSpots: MapSpot[] = militarySites.map((m) => ({
 }));
 
 export const allSpots: MapSpot[] = [...mapSpots, ...militaryAsSpots].sort((a, b) => a.day - b.day);
+export const spotById = new Map<string, MapSpot>(allSpots.map((s) => [s.id, s]));
+
