@@ -24,8 +24,7 @@ npm run build    # 输出到 dist/
 ## 部署到 Cloudflare Pages
 
 ```bash
-npm run build
-npx wrangler pages deploy dist --project-name shikoku-trip-2027
+npm run deploy   # = build + wrangler pages deploy dist --project-name shikoku-trip-2027
 ```
 
 需要 `CLOUDFLARE_API_TOKEN`（含 Cloudflare Pages: Edit 权限）与 `CLOUDFLARE_ACCOUNT_ID` 环境变量，或先 `npx wrangler login`。

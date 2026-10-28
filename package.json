@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && npx wrangler pages deploy dist --project-name shikoku-trip-2027 --branch main"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
