@@ -239,6 +239,24 @@ export function AnimeSection({
   );
 }
 
+function matchPilgrimageSpot(scene: AnitabiScene | undefined, work: AnimePilgrimage) {
+  if (scene) {
+    const byPoint = allSpots.find((s) => s.anitabi?.pointId === scene.pointId);
+    if (byPoint) return byPoint;
+    let best = allSpots[0];
+    let bestD = Number.POSITIVE_INFINITY;
+    for (const s of allSpots) {
+      const d = Math.hypot(s.lat - scene.lat, s.lng - scene.lng);
+      if (d < bestD) {
+        best = s;
+        bestD = d;
+      }
+    }
+    if (best && bestD < 0.004) return best;
+  }
+  return allSpots.find((s) => Math.abs(s.lat - work.lat) < 0.002 && Math.abs(s.lng - work.lng) < 0.002);
+}
+
 function AnimeWorkCard({
   work: a,
   onLocateSpot,
@@ -252,11 +270,7 @@ function AnimeWorkCard({
   const scenes = a.scenes ?? [];
   const currentScene = scenes[sceneIdx];
 
-  const matchedSpot = allSpots.find(
-    (s) =>
-      (currentScene && s.anitabi?.pointId === currentScene.pointId) ||
-      (Math.abs(s.lat - a.lat) < 0.002 && Math.abs(s.lng - a.lng) < 0.002),
-  );
+  const matchedSpot = matchPilgrimageSpot(currentScene, a);
 
   return (
     <article className="group flex flex-col rounded-3xl bg-white bg-gradient-to-br from-violet-50/70 via-white to-fuchsia-50/50 p-5 shadow-sm ring-1 ring-slate-200/80 transition hover:shadow-md hover:ring-violet-300">
@@ -320,7 +334,7 @@ function AnimeWorkCard({
       <div className="no-print mt-auto flex flex-wrap items-center gap-2 pt-4 text-xs">
         {matchedSpot && onLocateSpot && (
           <button
-            onClick={() => onLocateSpot(matchedSpot.id, a.dayNumber)}
+            onClick={() => onLocateSpot(matchedSpot.id, matchedSpot.day)}
             className="inline-flex items-center gap-1 rounded-lg bg-violet-50 px-2.5 py-1.5 font-medium text-violet-700 ring-1 ring-violet-200/80 transition hover:bg-violet-100"
           >
             <MapPin className="h-3 w-3" /> 地图定位
