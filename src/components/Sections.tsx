@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Anchor, Calendar, Camera, CheckCircle2, Circle, Clock, ExternalLink, MapPin, RotateCcw, Ticket, TrainFront } from 'lucide-react';
+import { AlertTriangle, Anchor, Calendar, Camera, CheckCircle2, Circle, Clock, Compass, ExternalLink, MapPin, RotateCcw, Ticket, TrainFront } from 'lucide-react';
 import { militarySites } from '../data/militaryData';
 import { anime, checklist, transportTips } from '../data/itineraryData';
 import { dailyTideAndSunData, moonPhases2027June } from '../data/tideAndSunData';
+import type { AnimePilgrimage, AnitabiScene } from '../data/types';
 import { allSpots } from '../lib/allSpots';
-import { googleMapsUrl } from '../lib/categories';
+import { anitabiMapUrl, formatAnitabiTime, googleMapsUrl, googleStreetViewUrl } from '../lib/categories';
 
 export function SectionTitle({ kicker, title, desc }: { kicker: string; title: string; desc?: string }) {
   return (
@@ -131,6 +132,90 @@ export function MilitarySection({
   );
 }
 
+export function AnitabiCard({
+  scene,
+  compact = false,
+}: {
+  scene: AnitabiScene;
+  compact?: boolean;
+}) {
+  const timeStr = formatAnitabiTime(scene.s);
+  return (
+    <div className="overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-slate-200/90">
+      <div className="relative aspect-video w-full overflow-hidden bg-slate-900">
+        <img
+          src={scene.image}
+          alt={`${scene.animeTitle} - ${scene.spotName}`}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          className="h-full w-full object-cover transition duration-300 hover:scale-[1.02]"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/65 via-transparent to-black/70" />
+        <div className="pointer-events-none absolute inset-x-2 top-2 text-center">
+          <div className="font-serif-jp text-xs font-black tracking-wider text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] sm:text-sm">
+            {scene.animeTitleJa}
+          </div>
+          <div className="text-[10px] font-medium tracking-widest text-white/80 drop-shadow">
+            {scene.animeTitle}
+          </div>
+        </div>
+        {scene.ep !== undefined && (
+          <span className="absolute bottom-2 left-2.5 rounded bg-black/65 px-1.5 py-0.5 font-mono-num text-[11px] font-bold text-white backdrop-blur-xs">
+            {typeof scene.ep === 'number' ? `EP${scene.ep}` : scene.ep}
+          </span>
+        )}
+        {timeStr && (
+          <span className="absolute bottom-2 right-2.5 rounded bg-black/65 px-1.5 py-0.5 font-mono-num text-[11px] font-bold text-white backdrop-blur-xs">
+            {timeStr}
+          </span>
+        )}
+      </div>
+      <div className={`flex items-center justify-between gap-2 bg-white ${compact ? 'px-3 py-2' : 'px-3.5 py-2.5'}`}>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-xs font-bold text-slate-900 sm:text-sm" title={scene.spotName}>
+            {scene.spotName}
+          </div>
+          <a
+            href={anitabiMapUrl(scene.bangumiId, scene.pointId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block truncate text-[11px] font-medium text-sky-600 hover:text-sky-700 hover:underline"
+          >
+            {scene.animeTitle} · Anitabi 巡礼地图
+          </a>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <div className="flex items-center gap-1.5">
+            <a
+              href={googleMapsUrl(`${scene.lat},${scene.lng}`)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="在 Google 地图查看精确坐标"
+              className="inline-flex items-center gap-0.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
+            >
+              <MapPin className="h-3 w-3 text-rose-500" /> 地图
+            </a>
+            <a
+              href={googleStreetViewUrl(scene.lat, scene.lng)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="打开 Google 360° 实景街景对比动画取景角度"
+              className="inline-flex items-center gap-0.5 rounded-md bg-gradient-to-r from-amber-500 via-rose-500 to-sky-600 px-1.5 py-0.5 font-mono-num text-[10px] font-black text-white shadow-2xs transition hover:opacity-90"
+            >
+              <Compass className="h-3 w-3" /> 360°
+            </a>
+          </div>
+          {scene.origin && (
+            <span className="max-w-[120px] truncate text-[10px] text-slate-400">
+              {scene.origin.startsWith('Anitabi@') ? scene.origin.replace('Anitabi', '') : `@${scene.origin}`}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AnimeSection({
   onLocateSpot,
   onJumpToDay,
@@ -141,68 +226,124 @@ export function AnimeSection({
   return (
     <section id="anime" className="scroll-mt-20">
       <SectionTitle
-        kicker="PILGRIMAGE"
-        title={`动漫巡礼 · ${anime.length} 部作品`}
-        desc="全部嵌进主线，不需要额外绕路。每部附机位建议，可直接定位到地图或跳转对应日期。"
+        kicker="PILGRIMAGE × ANITABI"
+        title={`动漫圣地巡礼 · ${anime.length} 部作品（含实景机位图鉴）`}
+        desc="接入 Anitabi 动画取景数据库！支持直接切换每部作品的经典分镜原画、集数时间戳（EP/mm:ss）、Google 360° 全景街景机位对比与地图定位。"
       />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {anime.map((a) => {
-          const matchedSpot = allSpots.find(
-            (s) => Math.abs(s.lat - a.lat) < 0.001 && Math.abs(s.lng - a.lng) < 0.001,
-          );
-          return (
-            <article
-              key={a.id}
-              className="group flex flex-col rounded-3xl bg-white bg-gradient-to-br from-violet-50/80 via-white to-fuchsia-50/60 p-5 shadow-sm ring-1 ring-slate-200/80 transition hover:shadow-md hover:ring-violet-300"
-            >
-              <div className="flex items-center justify-between text-xs">
-                <span className="rounded-md bg-violet-100 px-2 py-0.5 font-medium text-violet-700">{a.genre}</span>
-                <span className="font-mono-num text-slate-500">D{a.dayNumber} · {a.dayLabel}</span>
-              </div>
-              <h3 className="mt-3 font-serif-jp text-base font-bold text-slate-900">{a.title}</h3>
-              <p className="mt-0.5 text-xs text-slate-500">{a.titleJa}</p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {a.spots.map((s) => (
-                  <span key={s} className="rounded-lg bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                    {s}
-                  </span>
-                ))}
-              </div>
-              <p className="mt-3 flex gap-1.5 rounded-xl bg-violet-50/60 p-2.5 text-xs text-slate-600 ring-1 ring-violet-100">
-                <Camera className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600" />
-                <span>机位：{a.shotGuide}</span>
-              </p>
-              <div className="no-print mt-auto flex flex-wrap items-center gap-2 pt-4 text-xs">
-                {matchedSpot && onLocateSpot && (
-                  <button
-                    onClick={() => onLocateSpot(matchedSpot.id, a.dayNumber)}
-                    className="inline-flex items-center gap-1 rounded-lg bg-violet-50 px-2.5 py-1.5 font-medium text-violet-700 ring-1 ring-violet-200/80 transition hover:bg-violet-100"
-                  >
-                    <MapPin className="h-3 w-3" /> 地图定位
-                  </button>
-                )}
-                {onJumpToDay && (
-                  <button
-                    onClick={() => onJumpToDay(a.dayNumber)}
-                    className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1.5 font-medium text-slate-700 transition hover:bg-slate-200"
-                  >
-                    <Calendar className="h-3 w-3" /> D{a.dayNumber} 行程
-                  </button>
-                )}
-                <a
-                  href={googleMapsUrl(a.googleMapsQuery)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-auto inline-flex items-center gap-1 font-medium text-violet-600 hover:text-violet-700"
-                >
-                  打开地点 <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            </article>
-          );
-        })}
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {anime.map((a) => (
+          <AnimeWorkCard key={a.id} work={a} onLocateSpot={onLocateSpot} onJumpToDay={onJumpToDay} />
+        ))}
       </div>
     </section>
+  );
+}
+
+function AnimeWorkCard({
+  work: a,
+  onLocateSpot,
+  onJumpToDay,
+}: {
+  work: AnimePilgrimage;
+  onLocateSpot?: (spotId: string, day: number) => void;
+  onJumpToDay?: (day: number) => void;
+}) {
+  const [sceneIdx, setSceneIdx] = useState(0);
+  const scenes = a.scenes ?? [];
+  const currentScene = scenes[sceneIdx];
+
+  const matchedSpot = allSpots.find(
+    (s) =>
+      (currentScene && s.anitabi?.pointId === currentScene.pointId) ||
+      (Math.abs(s.lat - a.lat) < 0.002 && Math.abs(s.lng - a.lng) < 0.002),
+  );
+
+  return (
+    <article className="group flex flex-col rounded-3xl bg-white bg-gradient-to-br from-violet-50/70 via-white to-fuchsia-50/50 p-5 shadow-sm ring-1 ring-slate-200/80 transition hover:shadow-md hover:ring-violet-300">
+      <div className="flex items-center justify-between text-xs">
+        <span className="rounded-md bg-violet-100 px-2 py-0.5 font-medium text-violet-700">{a.genre}</span>
+        <span className="font-mono-num text-slate-500">
+          D{a.dayNumber} · {a.dayLabel}
+        </span>
+      </div>
+      <div className="mt-2.5 flex items-baseline justify-between gap-2">
+        <div>
+          <h3 className="font-serif-jp text-base font-bold text-slate-900">{a.title}</h3>
+          <p className="mt-0.5 text-xs text-slate-500">{a.titleJa}</p>
+        </div>
+        {a.bangumiId && (
+          <a
+            href={anitabiMapUrl(a.bangumiId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded-lg bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-700 ring-1 ring-sky-200/80 transition hover:bg-sky-100"
+          >
+            Anitabi 地图 ↗
+          </a>
+        )}
+      </div>
+
+      {currentScene && (
+        <div className="mt-3">
+          <AnitabiCard scene={currentScene} compact />
+          {scenes.length > 1 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {scenes.map((sc, idx) => (
+                <button
+                  key={sc.pointId}
+                  onClick={() => setSceneIdx(idx)}
+                  className={`rounded-lg px-2 py-1 text-[11px] font-medium transition ${
+                    idx === sceneIdx
+                      ? 'bg-violet-600 text-white shadow-2xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-violet-50 hover:text-violet-700'
+                  }`}
+                >
+                  {sc.spotName.replace(/（.*?）|\(.*?\)/g, '').slice(0, 8)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {a.spots.map((s) => (
+          <span key={s} className="rounded-lg bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+            {s}
+          </span>
+        ))}
+      </div>
+      <p className="mt-3 flex gap-1.5 rounded-xl bg-violet-50/60 p-2.5 text-xs text-slate-600 ring-1 ring-violet-100">
+        <Camera className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600" />
+        <span>机位：{a.shotGuide}</span>
+      </p>
+      <div className="no-print mt-auto flex flex-wrap items-center gap-2 pt-4 text-xs">
+        {matchedSpot && onLocateSpot && (
+          <button
+            onClick={() => onLocateSpot(matchedSpot.id, a.dayNumber)}
+            className="inline-flex items-center gap-1 rounded-lg bg-violet-50 px-2.5 py-1.5 font-medium text-violet-700 ring-1 ring-violet-200/80 transition hover:bg-violet-100"
+          >
+            <MapPin className="h-3 w-3" /> 地图定位
+          </button>
+        )}
+        {onJumpToDay && (
+          <button
+            onClick={() => onJumpToDay(a.dayNumber)}
+            className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1.5 font-medium text-slate-700 transition hover:bg-slate-200"
+          >
+            <Calendar className="h-3 w-3" /> D{a.dayNumber} 行程
+          </button>
+        )}
+        <a
+          href={googleStreetViewUrl(currentScene?.lat ?? a.lat, currentScene?.lng ?? a.lng)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto inline-flex items-center gap-1 font-medium text-violet-600 hover:text-violet-700"
+        >
+          360° 街景 <ExternalLink className="h-3 w-3" />
+        </a>
+      </div>
+    </article>
   );
 }
 

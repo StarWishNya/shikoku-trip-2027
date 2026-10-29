@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
-import { Calendar, ChevronLeft, ChevronRight, ExternalLink, Layers, MapPin, Navigation, RotateCcw, Search, X } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Compass, ExternalLink, Layers, MapPin, Navigation, RotateCcw, Search, X } from 'lucide-react';
 import { allSpots, spotById } from '../lib/allSpots';
-import { categoryMeta, googleEmbedUrl, googleMapsUrl } from '../lib/categories';
+import { anitabiMapUrl, categoryMeta, formatAnitabiTime, googleEmbedUrl, googleMapsUrl, googleStreetViewUrl } from '../lib/categories';
 import { days } from '../data/itineraryData';
 import type { MapSpot, SpotCategory } from '../data/types';
+import { AnitabiCard } from './Sections';
 
 const tiles = {
   pale: { label: '淡色', url: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', attr: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">国土地理院</a>', maxZoom: 18 },
@@ -38,6 +39,37 @@ function makeIcon(s: MapSpot, active: boolean) {
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   });
+}
+
+function makeAnitabiPopupHtml(s: MapSpot) {
+  const sc = s.anitabi!;
+  const timeStr = formatAnitabiTime(sc.s);
+  const epLabel = sc.ep !== undefined ? (typeof sc.ep === 'number' ? `EP${sc.ep}` : sc.ep) : '';
+  const originLabel = sc.origin ? (sc.origin.startsWith('Anitabi@') ? sc.origin.replace('Anitabi', '') : `@${sc.origin}`) : '@Anitabi';
+  return `
+    <div style="width:270px;overflow:hidden;border-radius:12px;background:#fff;font-family:inherit;box-shadow:0 4px 14px rgba(15,23,42,0.12)">
+      <div style="position:relative;width:270px;height:152px;background:#0f172a;overflow:hidden">
+        <img src="${sc.image}" alt="${sc.spotName}" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;display:block" />
+        <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.65) 0%,transparent 42%,transparent 62%,rgba(0,0,0,0.72) 100%)"></div>
+        <div style="position:absolute;top:6px;left:8px;right:8px;text-align:center;color:#fff;font-weight:900;font-size:13px;letter-spacing:0.06em;text-shadow:0 1px 4px rgba(0,0,0,0.9)">${sc.animeTitleJa}</div>
+        ${epLabel ? `<span style="position:absolute;bottom:6px;left:8px;background:rgba(0,0,0,0.65);color:#fff;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;font-family:ui-monospace,monospace">${epLabel}</span>` : ''}
+        ${timeStr ? `<span style="position:absolute;bottom:6px;right:8px;background:rgba(0,0,0,0.65);color:#fff;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;font-family:ui-monospace,monospace">${timeStr}</span>` : ''}
+      </div>
+      <div style="padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff">
+        <div style="min-width:0;flex:1">
+          <div style="font-weight:700;font-size:13px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sc.spotName}</div>
+          <a href="${anitabiMapUrl(sc.bangumiId, sc.pointId)}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#0284c7;text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sc.animeTitle}</a>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
+            <a href="${googleMapsUrl(`${sc.lat},${sc.lng}`)}" target="_blank" rel="noopener noreferrer" title="Google 地图" style="display:inline-flex;align-items:center;padding:2px 5px;border-radius:4px;background:#f0fdf4;color:#15803d;font-size:10px;font-weight:700;text-decoration:none;border:1px solid #bbf7d0">📍</a>
+            <a href="${googleStreetViewUrl(sc.lat, sc.lng)}" target="_blank" rel="noopener noreferrer" title="360° 实景街景" style="display:inline-flex;align-items:center;padding:2px 6px;border-radius:4px;background:linear-gradient(90deg,#f59e0b,#ef4444,#0284c7);color:#fff;font-size:10px;font-weight:800;text-decoration:none">360</a>
+          </div>
+          <div style="font-size:10px;color:#64748b;margin-top:2px">${originLabel}</div>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 export interface TripMapProps {
@@ -153,12 +185,23 @@ export default function TripMap({
     visible.forEach((s) => {
       const isAct = selected?.id === s.id;
       const mk = L.marker([s.lat, s.lng], { icon: makeIcon(s, isAct), zIndexOffset: isAct ? 1000 : 0 });
-      mk.bindTooltip(`Day ${s.day} · ${s.name}`, { direction: 'top', offset: [0, -14] });
+      mk.bindTooltip(`Day ${s.day} · ${s.name}${s.anitabi ? ' · 🎬 含巡礼原画' : ''}`, { direction: 'top', offset: [0, -14] });
+      if (s.anitabi) {
+        mk.bindPopup(makeAnitabiPopupHtml(s), {
+          maxWidth: 280,
+          minWidth: 270,
+          className: 'anitabi-leaflet-popup',
+          offset: [0, -10],
+        });
+      }
       mk.on('click', () => {
         setSelectedId(s.id);
         setShowEmbed(false);
       });
       mk.addTo(layer);
+      if (isAct && s.anitabi) {
+        setTimeout(() => mk.openPopup(), 120);
+      }
     });
   }, [visible, selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -438,6 +481,12 @@ function SpotDetail({
 
       <p className="mt-3 text-sm leading-relaxed text-slate-600">{spot.summary}</p>
 
+      {spot.anitabi && (
+        <div className="mt-3">
+          <AnitabiCard scene={spot.anitabi} compact />
+        </div>
+      )}
+
       {(spot.timeWindow || spot.ticket || spot.transitInfo) && (
         <dl className="mt-3 space-y-1.5 rounded-2xl bg-slate-50 p-3 text-xs ring-1 ring-slate-200/60">
           {spot.timeWindow && <Row k="时间" v={spot.timeWindow} />}
@@ -474,26 +523,34 @@ function SpotDetail({
       )}
 
       <div className="mt-auto space-y-2 pt-4">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={onToggleEmbed}
-            className="flex-1 rounded-xl bg-slate-100 px-3 py-2 text-xs font-medium text-slate-800 transition hover:bg-slate-200"
+            className="flex-1 rounded-xl bg-slate-100 px-2.5 py-2 text-xs font-medium text-slate-800 transition hover:bg-slate-200"
           >
-            {showEmbed ? '收起地图预览' : '内嵌地图预览'}
+            {showEmbed ? '收起预览' : '地图预览'}
           </button>
+          <a
+            href={googleStreetViewUrl(spot.anitabi?.lat ?? spot.lat, spot.anitabi?.lng ?? spot.lng)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl bg-amber-50 px-2.5 py-2 text-xs font-semibold text-amber-800 ring-1 ring-amber-200/80 transition hover:bg-amber-100"
+          >
+            <Compass className="h-3.5 w-3.5 text-amber-600" /> 360° 街景
+          </a>
           {onJumpToDay && (
             <button
               onClick={() => onJumpToDay(spot.day)}
-              className="flex-1 rounded-xl bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700 ring-1 ring-sky-200/80 transition hover:bg-sky-100"
+              className="flex-1 rounded-xl bg-sky-50 px-2.5 py-2 text-xs font-medium text-sky-700 ring-1 ring-sky-200/80 transition hover:bg-sky-100"
             >
-              Day {spot.day} 行程
+              D{spot.day} 行程
             </button>
           )}
           <a
             href={googleMapsUrl(spot.googleMapsQuery)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-sky-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-sky-500"
+            className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-sky-600 px-2.5 py-2 text-xs font-semibold text-white transition hover:bg-sky-500"
           >
             <Navigation className="h-3.5 w-3.5" /> 导航 <ExternalLink className="h-3 w-3" />
           </a>

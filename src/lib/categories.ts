@@ -10,3 +10,16 @@ export const categoryMeta: Record<SpotCategory, { label: string; color: string; 
 
 export const googleMapsUrl = (q: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 export const googleEmbedUrl = (lat: number, lng: number) => `https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+export const googleStreetViewUrl = (lat: number, lng: number) =>
+  `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`;
+export const anitabiMapUrl = (bangumiId: number, pointId?: string) =>
+  `https://anitabi.cn/map?bangumiId=${bangumiId}${pointId ? `&pid=${pointId}` : ''}`;
+export const formatAnitabiImage = (url: string, plan: 'h160' | 'h360' = 'h360') =>
+  url.replace(/[?&]plan=h\d+/, `?plan=${plan}`);
+export const formatAnitabiTime = (seconds?: number) => {
+  if (seconds === undefined || seconds === null || Number.isNaN(seconds)) return '';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+

@@ -1,5 +1,20 @@
 export type SpotCategory = 'military' | 'anime' | 'scenic' | 'transport' | 'food';
 
+export interface AnitabiScene {
+  pointId: string;
+  bangumiId: number;
+  animeTitle: string;
+  animeTitleJa: string;
+  spotName: string;
+  image: string;
+  ep?: string | number;
+  s?: number;
+  lat: number;
+  lng: number;
+  origin?: string;
+  originUrl?: string;
+}
+
 export interface MapSpot {
   id: string;
   day: number;
@@ -17,6 +32,7 @@ export interface MapSpot {
   highlights?: string[];
   warning?: string;
   googleMapsQuery: string;
+  anitabi?: AnitabiScene;
 }
 
 export interface TimelineStop {
@@ -103,6 +119,7 @@ export interface MilitarySite {
 
 export interface AnimePilgrimage {
   id: string;
+  bangumiId?: number;
   title: string;
   titleJa: string;
   dayLabel: string;
@@ -114,4 +131,5 @@ export interface AnimePilgrimage {
   lat: number;
   lng: number;
   googleMapsQuery: string;
+  scenes?: AnitabiScene[];
 }
